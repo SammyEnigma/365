@@ -1,9 +1,10 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 
+set -euo pipefail
 ################################################
 # Kali Linux Blue Team, Red Team, OSINT CTI, Setup Automation Script
-# Last Updated 12/17/2025, minor evil updates, pay me later
-# Tested on Kali 2025.4 XFCE
+# Last Updated 06/18/2026, minor evil updates, pay me later
+# Tested on Kali 2026.1 XFCE
 # Usage: sudo git clone https://github.com/aryanguenthner/365 /opt/365
 # chmod -R 777 /home/kali/ /opt/365
 # chmod a+x *.py *.sh /home/kali/ /opt/365
@@ -14,14 +15,21 @@ echo
 # TODO: Create a splash screen with menu options
 # Menu options: 1 = Update Kali, 2 = Update Kali linux Headers, 3 Update VBox Guest Additions's, 4 Give me it all, update the kitchen sink!
 
+# escalate to root if not already
+if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+  exec sudo --preserve-env=DISPLAY,XAUTHORITY bash "$0" "$@"
+fi
+
 # Keep the screen on during install.
-xset s off            # Disable screensaver
-xset s noblank        # No screen blanking
-xset -dpms            # Disable DPMS power saving
+if [ -n "${DISPLAY:-}" ]; then
+    xset s off
+    xset s noblank
+    xset -dpms
+fi
 
 # Kali Internet Optimizer, Attempt to make the download/upload speed faster
 # Ensure /etc/sysctl.d/99-disable-ipv6.conf exists; create and apply it only if missing.
-set -euo pipefail
+
 
 # escalate to root if not already
 if [ "${EUID:-$(id -u)}" -ne 0 ]; then
@@ -31,7 +39,7 @@ fi
 # Script to disable IPv6 on Debian-based systems
 # Run with sudo/root privileges
 
-set -e
+
 
 CONF=/etc/sysctl.d/99-disable-ipv6.conf
 echo "Checking IPv6 configuration..."
@@ -90,7 +98,7 @@ GREEN=032m
 YELLOW=033m
 RED=031m
 BLUE=034m
-PWD=$(pwd)
+SCRIPT_DIR=$(pwd)
 
 # Today's Date
 timedatectl set-timezone America/Los_Angeles
@@ -130,7 +138,7 @@ echo -e "\e[034mGetting BIOS Info\e[0m"
 sudo dmidecode -s bios-version | tee /home/kali/Desktop/bios-information.txt
 echo
 echo -e "\e[031mGetting Network Information\e[0m"
-sudo apt-get update && apt-get -y install jq > /dev/null 2>&1
+sudo apt-get update && sudo apt-get -y install jq > /dev/null 2>&1
 echo
 # Network Information
 # Get location details using ipinfo.io
@@ -151,7 +159,7 @@ CITY=$(echo "$LOCATION" | jq -r '.city')
 
 # Get local Kali IP
 KALI=$(hostname -I | awk '{print $1}')
-SUBNET=`ip r | awk 'NR==2' | awk '{print $1}'`
+SUBNET=$(ip r | awk 'NR==2' | awk '{print $1}')
 
 # Print in table format
 echo "---------------------------------"
@@ -190,11 +198,11 @@ echo
 # sudo xfce4-panel > /dev/null 2>&1
 
 # Prepare Kali installs
-sudo apt-get update && apt-get -y full-upgrade
+sudo apt-get update && sudo apt-get -y full-upgrade
 echo
 LOGFILE="/var/log/kali_apt_install_errors.log"
 PACKAGES=(
-golang-go netexec mono-devel printer-driver-escpr pipx python3-distutils-extra
+libimobiledevice-utils espeak golang-go netexec mono-devel printer-driver-escpr pipx python3-distutils-extra
 torbrowser-launcher shellcheck yt-dlp libxcb-cursor0 libxcb-xtest0 docker.io
 docker-compose freefilesync libfuse2t64 libkrb5-dev metagoofil pandoc
 python3-docxtpl cmseek neo4j libu2f-udev freefilesync hcxdumptool hcxtools
@@ -242,7 +250,7 @@ GREEN=032m
 YELLOW=033m
 RED=031m
 BLUE=034m
-PWD=$(pwd)
+SCRIPT_DIR=$(pwd)
 export LC_TIME="en_US.UTF-8"
 
 # Change directory to Kali Downloads
@@ -392,20 +400,16 @@ echo
 
 # Updog Install
 # Create a virtual environment
-DOG=/root/.local/share/pipx/venvs/updog/bin/updog
-if [ -f "$DOG" ]
-then
-    echo -e "\e[031mFound The Dog\e[0m"
-else
-    echo -e "\e[031mGetting the Dog\e[0m"
+echo -e "\e[031mGetting the Dog\e[0m"
 sudo pipx install updog
 sudo pipx ensurepath
 export PATH=/root/.local/bin:$PATH
+# Append to zshrc only if not already there
+if ! grep -q "PATH=/root/.local/bin" ~/.zshrc; then
 echo 'export PATH=/root/.local/bin:$PATH' >> ~/.zshrc
-source ~/.zshrc
-    echo
 fi
-echo
+echo -e "\033[1;32m[✓] Updog installed. Re-login or open a new terminal for PATH to take effect.\033[0m"
+    
 
 # 1. Keep Nmap scans Organized
 # -----------------------------------
@@ -733,8 +737,12 @@ then
     echo -e "\033[1;32m[✓] Found GoWitness 3.0.5\033[0m"
 else
     echo -e "\e[031mDownloading Missing GoWitness 3.0.5\e[0m"
-    chmod -R 777 /opt/365
+    if [ ! -d "/opt/365" ]; then
+        sudo mkdir -p /opt/365
+        chmod -R 777 /opt/365
+    fi
     wget --no-check-certificate -O /opt/365/gowitness 'https://drive.google.com/uc?export=download&id=1C-FpaGQA288dM5y40X1tpiNiN8EyNJKS' # gowitness 3.0.5
+    chmod +x /opt/365/gowitness
 fi
 echo
 
@@ -1025,22 +1033,17 @@ fi
 echo "Latest version found: $(basename "$DOWNLOAD_URL")"
 
 # 2. Check if claude-desktop is installed
+# Download the file
 if ! dpkg -s claude-desktop >/dev/null 2>&1; then
     echo "Claude Desktop is NOT installed. Initiating download..."
     echo
-    
+
     # Download the file
-    wget -O "$DEB_FILE" "$DOWNLOAD_URL"
-    
-    if [ $? -eq 0 ]; then
+    if wget -O "$DEB_FILE" "$DOWNLOAD_URL"; then
         echo "Download complete. Installing..."
         echo
-        # Install with sudo
         sudo dpkg -i "$DEB_FILE"
-        
-        # Fix any missing dependencies just in case
         sudo apt-get install -f -y
-        
         echo "Claude Desktop installation complete."
         echo
         rm "$DEB_FILE"
@@ -1129,7 +1132,7 @@ echo "[+] Firefox policy applied: network.dns.blockDotOnion = false"
 echo
 
 echo -e "\nexport LC_ALL=en_US.UTF-8\nexport LANG=en_US.UTF-8" >> ~/.zshrc
-source ~/.zshrc
+
 
 # Kali Setup Finish Time
 date | tee kali-setup-finish-date.txt
