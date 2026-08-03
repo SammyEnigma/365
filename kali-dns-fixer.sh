@@ -1,14 +1,3 @@
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=TorGhost Stop
-Comment=Stop TorGhost service
-Exec=bash -c sudo timeout -s KILL --foreground 10 /opt/365/torghost-stop.sh; sudo /opt/365/kali-dns-updater.sh
-Icon=security-low
-Terminal=true
-StartupNotify=true
-Path=
-
 #!/bin/bash
 
 echo "=== Fix DNS (Linux) ==="
