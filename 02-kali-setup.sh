@@ -2,9 +2,10 @@
 
 set -euo pipefail
 ################################################
-# Kali Linux Blue Team, Red Team, OSINT CTI, Setup Automation Script
-# Last Updated 06/18/2026, minor evil updates, pay me later
-# Tested on Kali 2026.1 XFCE
+# 02-kali-setup.sh
+# Kali Linux Red Team, Blue Team, OSINT CTI, Setup Automation Script
+# Last Updated 09/06/2026, minor evil updates, pay me later
+# Tested on Kali 2026.3 XFCE
 # Usage: sudo git clone https://github.com/aryanguenthner/365 /opt/365
 # chmod -R 777 /home/kali/ /opt/365
 # chmod a+x *.py *.sh /home/kali/ /opt/365
@@ -38,7 +39,6 @@ fi
 
 # Script to disable IPv6 on Debian-based systems
 # Run with sudo/root privileges
-
 
 
 CONF=/etc/sysctl.d/99-disable-ipv6.conf
@@ -729,6 +729,16 @@ else
 fi
 echo
 
+# Get Kali Tools
+if [ ! -d /opt/365 ]; then
+    echo "/opt/365 not found"
+    git clone https://github.com/aryanguenthner/365 /opt/365
+else
+    cd /opt/365 && git pull
+fi
+
+chmod +x /opt/365/*.sh /opt/365/*.py
+echo
 
 # Verify gowitness 3.0.5 is in /opt/365
 GOWIT=/opt/365/gowitness
@@ -1136,6 +1146,15 @@ echo -e "\nexport LC_ALL=en_US.UTF-8\nexport LANG=en_US.UTF-8" >> ~/.zshrc
 
 # Kali Setup Finish Time
 date | tee kali-setup-finish-date.txt
+echo
+sudo timedatectl set-ntp true
+echo
+# Update Hostname successfully to **HP-PRINTER** and apply across system configuration files.
+
+## sudo hostnamectl set-hostname HP-PRINTER
+echo "HP-PRINTER" | sudo tee /etc/hostname
+sudo sed -i 's/127.0.1.1.*/127.0.1.1\tHP-PRINTER/g' /etc/hosts
+sudo hostnamectl
 echo
 echo "Buy me a coffee"
 reboot
