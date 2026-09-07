@@ -1,5 +1,5 @@
 # 365
-OSINT, Threat Hunting, Network and Web Recon, Discovery, Enumeration, Vulnerability Mapping, Exploitation, Reporting
+Red Team, Exploitation, OSINT, Blue Team, Threat Hunting, Network and Web Recon, Discovery, Enumeration, Vulnerability Mapping, Reporting
 
 # Get your Kali right!
 
